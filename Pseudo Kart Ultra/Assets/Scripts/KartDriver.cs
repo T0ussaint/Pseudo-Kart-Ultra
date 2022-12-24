@@ -62,16 +62,40 @@ public class KartDriver : MonoBehaviour
         realSpeed = transform.InverseTransformDirection(rb.velocity).z;
         steerDir = Input.GetAxisRaw("Horizontal");
 
+        if(leftDrift && !rightDrift)
+        {
+            steerDir = Input.GetAxis("Horizontal") < 0 ? -1.5f : -0.5f;
+            transform.GetChild(0).localRotation = Quaternion.Lerp(transform.GetChild(0).localRotation, 
+                Quaternion.Euler(0, -20f, 0), 8f * Time.deltaTime);
+            
+            if(isDrifting && isGrounded)
+                rb.AddForce(transform.right * centriForce * Time.deltaTime, ForceMode.Acceleration);
+        }
+        else if(rightDrift && !leftDrift)
+        {
+            steerDir = Input.GetAxis("Horizontal") > 0 ? 1.5f : 0.5f;
+            transform.GetChild(0).localRotation = Quaternion.Lerp(transform.GetChild(0).localRotation, 
+                Quaternion.Euler(0, 20f, 0), 8f * Time.deltaTime);
+            
+            if(isDrifting && isGrounded)
+                rb.AddForce(transform.right * -centriForce * Time.deltaTime, ForceMode.Acceleration);
+        }
+        else
+            transform.GetChild(0).localRotation = Quaternion.Lerp(transform.GetChild(0).localRotation,
+                Quaternion.Euler(0, 0, 0), 8f * Time.deltaTime);
+
+        driftMechanics();
+
         steerVal = realSpeed / (realSpeed > 30 ? 4 : 1.5f) * steerDir * steerConst;
         steerVect = new Vector3(transform.eulerAngles.x, transform.eulerAngles.y + steerVal, transform.eulerAngles.z);
 
-        if(Input.GetKey(KeyCode.UpArrow))
+        if (Input.GetKey(KeyCode.UpArrow))
             currentSpeed = Mathf.Lerp(currentSpeed, maxSpeed, Time.deltaTime / 2f);
-        else if(Input.GetKey(KeyCode.DownArrow))
+        else if (Input.GetKey(KeyCode.DownArrow))
             currentSpeed = Mathf.Lerp(currentSpeed, -maxSpeed / 1.75f, 1f * Time.deltaTime);
         else
             currentSpeed = Mathf.Lerp(currentSpeed, 0, Time.deltaTime * 1.5f);
-        
+
         driveVel = transform.forward * currentSpeed;
         driveVel.y = rb.velocity.y;
         rb.velocity = driveVel;
@@ -102,7 +126,7 @@ public class KartDriver : MonoBehaviour
                 suspensionForce = (springForce + damperForce) * transform.up;
                 rb.AddForceAtPosition(suspensionForce, rayOrigin[i]);
 
-                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.FromToRotation(transform.up * 2f, hit.normal) 
+                transform.rotation = Quaternion.Slerp(transform.rotation, Quaternion.FromToRotation(transform.up * 2f, hit.normal)
                     * transform.rotation, 7.5f * Time.deltaTime);
                 isGrounded = true;
             }
@@ -111,13 +135,33 @@ public class KartDriver : MonoBehaviour
         }
     }
 
-    void OnDrawGizmos()
+    void driftMechanics()
     {
-        // Draw a yellow sphere at the transform's position
-        Gizmos.color = Color.red;
-        for (int i = 0; i < rayOrigin.Length; i++)
+        if (Input.GetKey(KeyCode.Space) && isGrounded && steerDir != 0f)
         {
-            Gizmos.DrawRay(rayOrigin[i], -transform.up * (maxLength + wheelRadius));
+            Debug.Log("Drifting");
+            leftDrift = !(rightDrift = steerDir > 0 ? true : false);
+            isDrifting = true;
+
+            if(currentSpeed > minDriftSpeed && Input.GetAxis("Horizontal") != 0)
+                driftTime += Time.deltaTime;
         }
+
+        if(!Input.GetKey(KeyCode.Space) || realSpeed < minDriftSpeed)
+        {
+            leftDrift = rightDrift = isDrifting = false;
+
+            if(driftTime > 1.5 && driftTime < 4)
+                boostTime = 0.75f;
+            if(driftTime >= 4 && driftTime < 7)
+                boostTime = 1.5f;
+            if(driftTime >= 7)
+                boostTime = 2.5f;
+        }
+    }
+
+    public float getBoostTime()
+    {
+        return boostTime;
     }
 }
