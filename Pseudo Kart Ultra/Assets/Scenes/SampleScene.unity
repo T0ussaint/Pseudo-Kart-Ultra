@@ -297,7 +297,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5f77f279ae0544db2bf56f2c73dd10da, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  riseLength: 0.25
+  riseLength: 0.5
   springTravel: 0.5
   wheelRadius: 0.25
   springConstant: 15
